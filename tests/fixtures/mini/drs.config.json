@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "root": ".",
+  "defaults": { "mode": "auto" },
+  "packages": {
+    "@panomapp/pkg-a": {
+      "local": { "path": "packages/pkg-a" },
+      "registry": { "version": "^1.0.0" }
+    },
+    "@panomapp/pkg-b": {
+      "local": { "path": "packages/pkg-b", "build": "node -e \"console.log('built')\"" },
+      "registry": { "version": "2.0.0" }
+    }
+  },
+  "consumers": {
+    "app-one": {
+      "dir": "apps/one",
+      "dependencies": ["@panomapp/pkg-a"]
+    },
+    "app-two": {
+      "dir": "apps/two",
+      "dependencies": ["@panomapp/pkg-a", "@panomapp/pkg-b"]
+    }
+  }
+}

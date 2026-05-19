@@ -1,0 +1,6 @@
+{
+  "name": "app-one",
+  "dependencies": {
+    "@panomapp/pkg-a": "^1.0.0"
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://panom.app/schemas/drs.config.schema.json",
+  "title": "DrsConfig",
+  "type": "object",
+  "required": ["version", "packages", "consumers"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1 },
+    "root": { "type": "string", "default": "." },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["local", "registry", "auto"],
+          "default": "auto"
+        }
+      }
+    },
+    "packages": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/PackageEntry"
+      }
+    },
+    "consumers": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Consumer"
+      }
+    },
+    "docker": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/DockerService"
+      }
+    }
+  },
+  "definitions": {
+    "LocalPackage": {
+      "type": "object",
+      "required": ["path"],
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "build": { "type": "string" }
+      }
+    },
+    "RegistryPackage": {
+      "type": "object",
+      "required": ["version"],
+      "additionalProperties": false,
+      "properties": {
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "PackageEntry": {
+      "type": "object",
+      "required": ["local", "registry"],
+      "additionalProperties": false,
+      "properties": {
+        "local": { "$ref": "#/definitions/LocalPackage" },
+        "registry": { "$ref": "#/definitions/RegistryPackage" }
+      }
+    },
+    "Consumer": {
+      "type": "object",
+      "required": ["dir", "dependencies"],
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string", "minLength": 1 },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      }
+    },
+    "DockerWhenLocal": {
+      "type": "object",
+      "required": ["context", "dockerfile"],
+      "additionalProperties": false,
+      "properties": {
+        "context": { "type": "string", "minLength": 1 },
+        "dockerfile": { "type": "string", "minLength": 1 }
+      }
+    },
+    "DockerService": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "whenLocal": { "$ref": "#/definitions/DockerWhenLocal" }
+      }
+    }
+  }
+}

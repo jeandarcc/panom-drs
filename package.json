@@ -1,0 +1,48 @@
+{
+  "name": "@panomapp/drs",
+  "version": "1.0.0",
+  "description": "Dependency Resolver — single config for local path vs registry dependency specifiers.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "drs": "./dist/cli.cjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./schema": "./schema/drs.config.schema.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "schema",
+    "README.md"
+  ],
+  "scripts": {
+    "prepare": "npm run build",
+    "build": "tsup src/index.ts src/cli.ts --format esm,cjs --dts --clean",
+    "build:schema": "node scripts/emit-schema.cjs || true",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build:schema && npm run build"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.9",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}
