@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { DrsConfig, DrsMode, PackageEntry } from '../config/schema.js';
 import { resolveModeFromEnv, resolveRoot } from '../config/load.js';
+import { isCiEnvironment } from './env.js';
 
 export function effectiveMode(
   config: DrsConfig,
@@ -38,6 +39,9 @@ export function resolveSourceForPackage(
     case 'registry':
       return 'registry';
     case 'auto':
+      if (isCiEnvironment()) {
+        return 'registry';
+      }
       return localExists ? 'local' : 'registry';
     default:
       return localExists ? 'local' : 'registry';

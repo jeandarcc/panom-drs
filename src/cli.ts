@@ -6,8 +6,10 @@ import {
   resolve,
   apply,
   check,
+  build,
   formatPlan,
   formatCheckResult,
+  formatBuildSummary,
   formatDockerHints,
   INIT_CONFIG_TEMPLATE,
 } from './index.js';
@@ -55,6 +57,7 @@ function printHelp(): void {
   console.log(`@panomapp/drs — Dependency Resolver
 
 Usage:
+  drs build [--dry-run] [--skip-install] [--mode ...] [--config path] [--verbose]
   drs resolve [--print human|json] [--mode local|registry|auto] [--config path]
   drs apply [--dry-run] [--build] [--install] [--mode ...] [--config path] [--verbose]
   drs check [--mode ...] [--config path]
@@ -67,7 +70,8 @@ Environment:
   DRS_PACKAGE_<name>  Per-package mode (/ → __ in scoped names)
 
 Examples:
-  DRS_MODE=local drs apply --build
+  drs build
+  drs build --dry-run
   drs check
 `);
 }
@@ -81,6 +85,17 @@ async function main(): Promise<void> {
 
   try {
     switch (command) {
+      case 'build': {
+        const config = loadConfig({ configPath, cwd });
+        const result = build(config, {
+          mode,
+          dryRun: flagBool(flags, 'dry-run'),
+          skipInstall: flagBool(flags, 'skip-install'),
+          verbose,
+        });
+        console.log(formatBuildSummary(result));
+        break;
+      }
       case 'resolve': {
         const config = loadConfig({ configPath, cwd });
         const plan = resolve(config, { mode });

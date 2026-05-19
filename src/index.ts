@@ -11,6 +11,7 @@ export type {
 } from './resolve/plan.js';
 export { resolve } from './resolve/plan.js';
 export { toFileSpecifier, normalizeForCompare } from './resolve/paths.js';
+export { isCiEnvironment } from './resolve/env.js';
 
 export type { ApplyResult, PackageJsonChange } from './apply/package-json.js';
 export { applyPackageJson } from './apply/package-json.js';
@@ -21,6 +22,10 @@ export type { DriftItem, CheckResult } from './check/drift.js';
 export { check } from './check/drift.js';
 
 export { formatDockerHints, getDockerHints } from './docker/hints.js';
+export { formatPlan, formatCheckResult } from './format.js';
+
+export type { BuildOptions, BuildRunResult } from './build/run.js';
+export { build, formatBuildSummary } from './build/run.js';
 
 import type { ResolutionPlan } from './resolve/plan.js';
 import type { DrsConfig } from './config/schema.js';
@@ -43,11 +48,11 @@ export function apply(plan: ResolutionPlan, options: ApplyOptions = {}): ApplyRe
 } {
   const result = applyPackageJson(plan, { dryRun: options.dryRun });
 
-  let build;
+  let buildResult;
   if (options.runBuild && !options.dryRun) {
-    build = runLocalBuilds(plan, { verbose: options.verbose });
-    if (build.errors.length > 0) {
-      throw new Error(`DRS local build failed:\n${build.errors.join('\n')}`);
+    buildResult = runLocalBuilds(plan, { verbose: options.verbose });
+    if (buildResult.errors.length > 0) {
+      throw new Error(`DRS local build failed:\n${buildResult.errors.join('\n')}`);
     }
   }
 
@@ -59,44 +64,7 @@ export function apply(plan: ResolutionPlan, options: ApplyOptions = {}): ApplyRe
     }
   }
 
-  return { ...result, build, installResult };
-}
-
-export function formatPlan(plan: ResolutionPlan, format: 'human' | 'json' = 'human'): string {
-  if (format === 'json') {
-    return JSON.stringify(plan, null, 2);
-  }
-  const lines = [
-    `DRS resolution plan (mode: ${plan.mode}, root: ${plan.root})`,
-    '',
-  ];
-  for (const e of plan.entries) {
-    lines.push(
-      `  ${e.consumerId} → ${e.name}`,
-      `    source: ${e.source}`,
-      `    specifier: ${e.specifier}`,
-    );
-    if (e.buildCommand) {
-      lines.push(`    build: ${e.buildCommand}`);
-    }
-    lines.push('');
-  }
-  return lines.join('\n');
-}
-
-export function formatCheckResult(result: CheckResult): string {
-  if (result.ok) {
-    return `OK — all dependencies match plan (mode: ${result.planMode}).`;
-  }
-  const lines = [`DRIFT detected (mode: ${result.planMode}):`, ''];
-  for (const d of result.drift) {
-    lines.push(`  [${d.consumerId}] ${d.name}`);
-    lines.push(`    expected: ${d.expected}`);
-    lines.push(`    actual:   ${d.actual ?? '(missing)'}`);
-    lines.push('');
-  }
-  lines.push('Run: drs apply');
-  return lines.join('\n');
+  return { ...result, build: buildResult, installResult };
 }
 
 export const INIT_CONFIG_TEMPLATE = {

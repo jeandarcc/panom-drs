@@ -12,6 +12,8 @@ describe('resolve', () => {
   beforeEach(() => {
     process.env = { ...envBackup };
     delete process.env.DRS_MODE;
+    delete process.env.CI;
+    delete process.env.GITHUB_ACTIONS;
   });
 
   afterEach(() => {
@@ -87,6 +89,13 @@ describe('resolve', () => {
     const config = loadFixture();
     const plan = resolve(config);
     expect(plan.entries[0]?.source).toBe('registry');
+  });
+
+  it('auto mode uses registry in CI even when local path exists', () => {
+    process.env.CI = 'true';
+    const config = loadFixture();
+    const plan = resolve(config, { mode: 'auto' });
+    expect(plan.entries.every((e) => e.source === 'registry')).toBe(true);
   });
 });
 

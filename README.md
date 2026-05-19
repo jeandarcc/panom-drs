@@ -4,15 +4,28 @@
 
 ## Quickstart
 
+Write [`drs.config.json`](./schema/drs.config.schema.json) with `"defaults": { "mode": "auto" }`, then:
+
 ```bash
-# From monorepo root (with drs.config.json)
-DRS_MODE=local npx drs apply --build
-npx drs check
+# From monorepo root
+npx drs build
+# or
+npm run drs:build
 ```
 
-## Config
+That is the only command you need for day-to-day work: updates consumer `package.json` files, builds local packages when needed, runs `npm install` in each consumer, and verifies drift.
 
-See [schema/drs.config.schema.json](./schema/drs.config.schema.json).
+## What `auto` does
+
+| Where | `auto` behavior |
+|-------|-----------------|
+| Your machine (paths exist) | `file:../local-package` + local `npm run build` |
+| CI (`CI=true` or `GITHUB_ACTIONS=true`) | `registry.version` from config (npm), even if folders exist in checkout |
+| Machine, path missing | registry |
+
+No need to set `DRS_MODE` for the usual local vs CI split.
+
+## Config
 
 ```json
 {
@@ -41,54 +54,69 @@ See [schema/drs.config.schema.json](./schema/drs.config.schema.json).
 |------|----------|
 | `local` | Always `file:<path>` (fails if path missing) |
 | `registry` | Always `registry.version` |
-| `auto` | Local if path exists, else registry |
+| `auto` | CI → registry; otherwise local if path exists, else registry |
 
-## Environment
+## Environment (overrides)
 
 | Variable | Description |
 |----------|-------------|
 | `DRS_CONFIG` | Path to config file |
-| `DRS_MODE` | Override global mode |
+| `DRS_MODE` | Force global mode (`local` / `registry` / `auto`) |
 | `DRS_PACKAGE_@panomapp__my-pkg` | Per-package mode (`/` → `__`) |
+
+Example: everything local except one package from npm:
+
+```bash
+DRS_MODE=local DRS_PACKAGE_@panomapp__hsm-panom-contract=registry drs build
+```
 
 ## CLI
 
 ```bash
-drs resolve [--print human|json] [--mode auto]
+drs build [--dry-run] [--skip-install] [--verbose]
+drs resolve [--print human|json]
 drs apply [--dry-run] [--build] [--install]
 drs check
 drs init
 drs docker
 ```
 
-## GitHub Actions (local paths, no registry for listed packages)
+## GitHub Actions
 
 ```yaml
 - uses: actions/checkout@v4
-- run: npm run build --prefix panom-drs
-- env:
-    DRS_MODE: local
-  run: node panom-drs/dist/cli.cjs apply --build --config drs.config.json
-- run: npm ci
-  working-directory: panom-backend
-- run: node panom-drs/dist/cli.cjs check --config drs.config.json
+- run: npm ci && npm run build
+  working-directory: panom-drs
+- run: npm install
+- run: npx drs build
 ```
+
+`auto` detects CI and uses registry specifiers; `npm install` in consumers pulls from npm.
 
 ## Programmatic API
 
 ```ts
-import { loadConfig, resolve, apply, check, formatPlan } from '@panomapp/drs';
+import { loadConfig, build } from '@panomapp/drs';
 
 const config = loadConfig();
-const plan = resolve(config, { mode: 'local' });
-apply(plan, { runBuild: true });
-const result = check(config);
+const result = build(config);
 ```
 
 ## Panom
 
-Panom uses root [drs.config.json](../drs.config.json). Replace legacy `deps:link-local` with:
+Root [drs.config.json](../drs.config.json). Primary script:
 
 ```bash
-npm run drs:apply
+npm run drs:build
+```
+
+Legacy `deps:link-local` in frontend → `npm run drs:build` from repo root.
+
+## Publishing
+
+```bash
+cd panom-drs
+npm test && npm run build
+npm version minor   # or patch
+npm publish --access public
 ```
