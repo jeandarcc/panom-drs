@@ -14,6 +14,7 @@ export const registryPackageSchema = z.object({
 export const packageEntrySchema = z.object({
   to: z.array(z.string().min(1)).optional(),
   'only-source': z.boolean().optional(),
+  prebuilt: z.boolean().optional(),
   local: localPackageSchema,
   registry: registryPackageSchema,
 });

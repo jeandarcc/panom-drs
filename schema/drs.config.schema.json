@@ -67,6 +67,7 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "only-source": { "type": "boolean" },
+        "prebuilt": { "type": "boolean" },
         "local": { "$ref": "#/definitions/LocalPackage" },
         "registry": { "$ref": "#/definitions/RegistryPackage" }
       }
