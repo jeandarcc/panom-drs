@@ -26,6 +26,16 @@ export function resolveSourceForPackage(
   const root = resolveRoot(config);
   const localAbs = path.resolve(root, entry.local.path);
   const localExists = fs.existsSync(localAbs);
+  const forceLocal = entry.local['only-source'] === true;
+
+  if (forceLocal) {
+    if (!localExists) {
+      throw new Error(
+        `DRS package "${packageName}" is marked only-source but local path is missing: ${localAbs}.`
+      );
+    }
+    return 'local';
+  }
 
   switch (mode) {
     case 'local':
