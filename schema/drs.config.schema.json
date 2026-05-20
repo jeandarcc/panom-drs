@@ -46,8 +46,7 @@
       "additionalProperties": false,
       "properties": {
         "path": { "type": "string", "minLength": 1 },
-        "build": { "type": "string" },
-        "only-source": { "type": "boolean" }
+        "build": { "type": "string" }
       }
     },
     "RegistryPackage": {
@@ -63,6 +62,11 @@
       "required": ["local", "registry"],
       "additionalProperties": false,
       "properties": {
+        "to": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "only-source": { "type": "boolean" },
         "local": { "$ref": "#/definitions/LocalPackage" },
         "registry": { "$ref": "#/definitions/RegistryPackage" }
       }

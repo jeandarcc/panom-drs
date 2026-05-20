@@ -26,7 +26,7 @@ export function resolveSourceForPackage(
   const root = resolveRoot(config);
   const localAbs = path.resolve(root, entry.local.path);
   const localExists = fs.existsSync(localAbs);
-  const forceLocal = entry.local['only-source'] === true;
+  const forceLocal = entry['only-source'] === true;
 
   if (forceLocal) {
     if (!localExists) {

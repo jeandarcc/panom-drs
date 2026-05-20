@@ -5,7 +5,6 @@ export const drsModeSchema = z.enum(['local', 'registry', 'auto']);
 export const localPackageSchema = z.object({
   path: z.string().min(1),
   build: z.string().optional(),
-  'only-source': z.boolean().optional(),
 });
 
 export const registryPackageSchema = z.object({
@@ -13,6 +12,8 @@ export const registryPackageSchema = z.object({
 });
 
 export const packageEntrySchema = z.object({
+  to: z.array(z.string().min(1)).optional(),
+  'only-source': z.boolean().optional(),
   local: localPackageSchema,
   registry: registryPackageSchema,
 });
