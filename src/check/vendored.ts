@@ -5,6 +5,7 @@ import { listVendoredConsumerDirs } from '../vendoring/run.js';
 import { resolve } from '../resolve/plan.js';
 import type { ResolveOptions } from '../resolve/plan.js';
 import { snapshotVendoredPackages } from '../vendoring/stamp.js';
+import { resolveLog, type DrsProgressOptions } from '../log.js';
 
 export type VendoredDriftReason =
   | 'missing-generated'
@@ -21,11 +22,12 @@ export interface VendoredDriftItem {
 
 export function checkVendoredDrift(
   config: DrsConfig,
-  options: ResolveOptions = {}
+  options: ResolveOptions & DrsProgressOptions = {}
 ): VendoredDriftItem[] {
   const plan = resolve(config, options);
   const drift: VendoredDriftItem[] = [];
   const root = resolveRoot(config);
+  const log = resolveLog(options);
 
   for (const consumerDir of listVendoredConsumerDirs(plan)) {
     const consumerId =
@@ -33,7 +35,10 @@ export function checkVendoredDrift(
         ([, consumer]) => path.resolve(root, consumer.dir) === consumerDir
       )?.[0] ?? path.relative(root, consumerDir);
 
-    const snapshots = snapshotVendoredPackages(config, consumerDir);
+    log.progress(`checking vendored modules for ${consumerId}…`);
+    const snapshots = snapshotVendoredPackages(config, consumerDir, {
+      onPackage: (name) => log.progress(`  fingerprint ${name}…`),
+    });
 
     for (const snapshot of snapshots) {
       if (!snapshot.sourceHash) {

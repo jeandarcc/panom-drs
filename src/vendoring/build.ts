@@ -5,6 +5,7 @@ import type { DrsConfig } from '../config/schema.js';
 import { resolveRoot } from '../config/load.js';
 import { findConsumerByDir } from './paths.js';
 import { getVendoringPlan } from './plan.js';
+import { resolveLog, type DrsProgressOptions } from '../log.js';
 
 export interface VendoredBuildResult {
   built: string[];
@@ -15,7 +16,7 @@ export interface VendoredBuildResult {
 export function buildSourcePackagesForVendoring(
   config: DrsConfig,
   consumerCwd: string,
-  options: { verbose?: boolean } = {}
+  options: DrsProgressOptions & { verbose?: boolean } = {}
 ): VendoredBuildResult {
   const plan = getVendoringPlan(config, consumerCwd);
   const root = resolveRoot(config);
@@ -23,6 +24,7 @@ export function buildSourcePackagesForVendoring(
   const skipped: string[] = [];
   const errors: string[] = [];
   const seen = new Set<string>();
+  const log = resolveLog(options);
 
   for (const sourcePackage of plan.sourcePackages) {
     if (sourcePackage.prebuilt || !sourcePackage.buildCommand) {
@@ -34,16 +36,13 @@ export function buildSourcePackagesForVendoring(
 
     const packageDir = path.resolve(root, sourcePackage.sourcePath);
     try {
-      if (options.verbose) {
-        console.error(
-          `[drs] source build ${sourcePackage.sourcePath}: ${sourcePackage.buildCommand}`
-        );
-      }
+      log.progress(`  source npm install ${sourcePackage.sourcePath}`);
       execSync('npm install', {
         cwd: packageDir,
         stdio: options.verbose ? 'inherit' : 'pipe',
         env: process.env,
       });
+      log.progress(`  source build ${sourcePackage.sourcePath}: ${sourcePackage.buildCommand}`);
       execSync(sourcePackage.buildCommand, {
         cwd: packageDir,
         stdio: options.verbose ? 'inherit' : 'pipe',
@@ -81,22 +80,21 @@ export function copyVendoredDistArtifacts(config: DrsConfig, consumerCwd: string
 export function buildVendoredModules(
   config: DrsConfig,
   consumerCwd: string,
-  options: { verbose?: boolean } = {}
+  options: DrsProgressOptions & { verbose?: boolean } = {}
 ): VendoredBuildResult {
   const plan = getVendoringPlan(config, consumerCwd);
   const { consumerDir } = findConsumerByDir(config, consumerCwd);
   const built: string[] = [];
   const skipped: string[] = [];
   const errors: string[] = [];
+  const log = resolveLog(options);
 
   for (const sourcePackage of plan.sourcePackages) {
     const packageDir = path.join(consumerDir, sourcePackage.generatedPath);
     const distDir = path.join(packageDir, 'dist');
 
     try {
-      if (options.verbose) {
-        console.error(`[drs] vendored npm install in ${sourcePackage.generatedPath}`);
-      }
+      log.progress(`  vendored npm install ${sourcePackage.generatedPath}`);
       execSync('npm install', {
         cwd: packageDir,
         stdio: options.verbose ? 'inherit' : 'pipe',
@@ -105,11 +103,9 @@ export function buildVendoredModules(
 
       if (sourcePackage.prebuilt) {
         if (sourcePackage.buildCommand) {
-          if (options.verbose) {
-            console.error(
-              `[drs] vendored validate ${sourcePackage.generatedPath}: ${sourcePackage.buildCommand}`
-            );
-          }
+          log.progress(
+            `  vendored validate ${sourcePackage.generatedPath}: ${sourcePackage.buildCommand}`
+          );
           execSync(sourcePackage.buildCommand, {
             cwd: packageDir,
             stdio: options.verbose ? 'inherit' : 'pipe',
@@ -130,11 +126,9 @@ export function buildVendoredModules(
         continue;
       }
 
-      if (options.verbose) {
-        console.error(
-          `[drs] vendored build ${sourcePackage.generatedPath}: ${sourcePackage.buildCommand}`
-        );
-      }
+      log.progress(
+        `  vendored build ${sourcePackage.generatedPath}: ${sourcePackage.buildCommand}`
+      );
       execSync(sourcePackage.buildCommand, {
         cwd: packageDir,
         stdio: options.verbose ? 'inherit' : 'pipe',

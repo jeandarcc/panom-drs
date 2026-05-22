@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import path from 'node:path';
 import type { ResolutionPlan } from '../resolve/plan.js';
+import { resolveLog, type DrsProgressOptions } from '../log.js';
 
 export interface BuildResult {
   built: string[];
@@ -8,11 +9,15 @@ export interface BuildResult {
   errors: string[];
 }
 
-export function runLocalBuilds(plan: ResolutionPlan, options: { verbose?: boolean } = {}): BuildResult {
+export function runLocalBuilds(
+  plan: ResolutionPlan,
+  options: DrsProgressOptions & { verbose?: boolean } = {}
+): BuildResult {
   const built: string[] = [];
   const skipped: string[] = [];
   const errors: string[] = [];
   const seen = new Set<string>();
+  const log = resolveLog(options);
 
   for (const entry of plan.entries) {
     if (entry.source !== 'local' || !entry.buildCommand || !entry.localPath) {
@@ -27,9 +32,7 @@ export function runLocalBuilds(plan: ResolutionPlan, options: { verbose?: boolea
 
     const pkgDir = path.resolve(plan.root, entry.localPath);
     try {
-      if (options.verbose) {
-        console.error(`[drs] build ${entry.localPath}: ${entry.buildCommand}`);
-      }
+      log.progress(`  build ${entry.localPath}: ${entry.buildCommand}`);
       execSync(entry.buildCommand, {
         cwd: pkgDir,
         stdio: options.verbose ? 'inherit' : 'pipe',
@@ -47,19 +50,19 @@ export function runLocalBuilds(plan: ResolutionPlan, options: { verbose?: boolea
 
 export function runConsumerInstall(
   plan: ResolutionPlan,
-  options: { verbose?: boolean } = {}
+  options: DrsProgressOptions & { verbose?: boolean } = {}
 ): { installed: string[]; errors: string[] } {
   const installed: string[] = [];
   const errors: string[] = [];
   const seen = new Set<string>();
+  const log = resolveLog(options);
 
   for (const entry of plan.entries) {
     if (seen.has(entry.consumerDir)) continue;
     seen.add(entry.consumerDir);
     try {
-      if (options.verbose) {
-        console.error(`[drs] npm install in ${entry.consumerDir}`);
-      }
+      const label = path.relative(plan.root, entry.consumerDir) || entry.consumerDir;
+      log.progress(`  npm install in ${label}`);
       execSync('npm install', {
         cwd: entry.consumerDir,
         stdio: options.verbose ? 'inherit' : 'pipe',

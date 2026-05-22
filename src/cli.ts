@@ -57,10 +57,10 @@ function printHelp(): void {
   console.log(`@panomapp/drs — Dependency Resolver
 
 Usage:
-  drs build [--dry-run] [--skip-install] [--if-stale] [--mode ...] [--config path] [--verbose]
+  drs build [--dry-run] [--skip-install] [--if-stale] [--mode ...] [--config path] [--verbose] [--quiet]
   drs resolve [--print human|json] [--mode local|registry|auto] [--config path]
-  drs apply [--dry-run] [--build] [--install] [--mode ...] [--config path] [--verbose]
-  drs check [--mode ...] [--config path]
+  drs apply [--dry-run] [--build] [--install] [--mode ...] [--config path] [--verbose] [--quiet]
+  drs check [--mode ...] [--config path] [--quiet]
   drs init [--config path]
   drs docker [--config path]
 
@@ -83,6 +83,7 @@ async function main(): Promise<void> {
   const mode = flagStr(flags, 'mode') as 'local' | 'registry' | 'auto' | undefined;
   const cwd = flagStr(flags, 'root') ?? process.cwd();
   const verbose = flagBool(flags, 'verbose');
+  const quiet = flagBool(flags, 'quiet');
 
   try {
     switch (command) {
@@ -94,6 +95,7 @@ async function main(): Promise<void> {
           skipInstall: flagBool(flags, 'skip-install'),
           ifStale: flagBool(flags, 'if-stale'),
           verbose,
+          quiet,
         });
         console.log(formatBuildSummary(result));
         break;
@@ -113,6 +115,7 @@ async function main(): Promise<void> {
           runBuild: flagBool(flags, 'build'),
           install: flagBool(flags, 'install'),
           verbose,
+          quiet,
         });
         if (flagBool(flags, 'dry-run')) {
           console.log(formatPlan(plan, 'human'));
@@ -141,7 +144,7 @@ async function main(): Promise<void> {
       }
       case 'check': {
         const config = loadConfig({ configPath, cwd });
-        const result = check(config, { mode });
+        const result = check(config, { mode, quiet });
         console.log(formatCheckResult(result));
         if (!result.ok) {
           process.exitCode = 1;

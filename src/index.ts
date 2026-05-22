@@ -65,6 +65,7 @@ export interface ApplyOptions {
   runBuild?: boolean;
   install?: boolean;
   verbose?: boolean;
+  quiet?: boolean;
 }
 
 export function apply(plan: ResolutionPlan, options: ApplyOptions = {}): ApplyResult & {

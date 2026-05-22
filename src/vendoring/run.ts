@@ -8,6 +8,7 @@ import {
   copyVendoredDistArtifacts,
 } from '../vendoring/build.js';
 import { writeVendorStampForConsumer } from '../vendoring/stamp.js';
+import { resolveLog, type DrsProgressOptions } from '../log.js';
 
 export interface VendoringApplyResult {
   synced: string[];
@@ -29,32 +30,34 @@ export function listVendoredConsumerDirs(plan: ResolutionPlan): string[] {
 export function runVendoring(
   config: DrsConfig,
   plan: ResolutionPlan,
-  options: { verbose?: boolean } = {}
+  options: DrsProgressOptions & { verbose?: boolean } = {}
 ): VendoringApplyResult {
   const synced: string[] = [];
   const built: string[] = [];
   const skipped: string[] = [];
   const errors: string[] = [];
+  const log = resolveLog(options);
 
   for (const consumerDir of listVendoredConsumerDirs(plan)) {
     const label = path.relative(plan.root, consumerDir) || consumerDir;
     try {
+      log.progress(`[${label}] building source packages…`);
       const sourceBuild = buildSourcePackagesForVendoring(config, consumerDir, options);
       built.push(...sourceBuild.built.map((p) => `${label}:${p}`));
       skipped.push(...sourceBuild.skipped.map((p) => `${label}:${p}`));
       errors.push(...sourceBuild.errors);
 
-      if (options.verbose) {
-        console.error(`[drs] sync vendored modules for ${label}`);
-      }
+      log.progress(`[${label}] syncing generated_modules…`);
       syncVendoredModules(config, consumerDir);
       synced.push(label);
 
+      log.progress(`[${label}] copying dist artifacts…`);
       const copied = copyVendoredDistArtifacts(config, consumerDir);
       if (copied.length > 0) {
         skipped.push(...copied.map((p) => `${label}:dist:${p}`));
       }
 
+      log.progress(`[${label}] installing and validating vendored packages…`);
       const buildResult = buildVendoredModules(config, consumerDir, options);
       built.push(...buildResult.built.map((p) => `${label}:${p}`));
       skipped.push(...buildResult.skipped.map((p) => `${label}:${p}`));

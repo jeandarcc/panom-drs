@@ -5,6 +5,7 @@ import { resolve } from '../resolve/plan.js';
 import type { ResolveOptions } from '../resolve/plan.js';
 import { normalizeForCompare } from '../resolve/paths.js';
 import { checkVendoredDrift, type VendoredDriftItem } from './vendored.js';
+import type { DrsProgressOptions } from '../log.js';
 
 export interface DriftItem {
   consumerId: string;
@@ -48,7 +49,10 @@ function checkPackageJsonDrift(config: DrsConfig, options: ResolveOptions = {}):
   return drift;
 }
 
-export function check(config: DrsConfig, options: ResolveOptions = {}): CheckResult {
+export function check(
+  config: DrsConfig,
+  options: ResolveOptions & DrsProgressOptions = {}
+): CheckResult {
   const plan = resolve(config, options);
   const drift = checkPackageJsonDrift(config, options);
   const vendoredDrift = checkVendoredDrift(config, options);

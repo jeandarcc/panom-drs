@@ -49,18 +49,24 @@ export function writeVendorStamp(consumerDir: string, stamp: VendorStampFile): v
   fs.writeFileSync(vendorStampPath(consumerDir), `${JSON.stringify(stamp, null, 2)}\n`, 'utf8');
 }
 
+export interface SnapshotVendoredOptions {
+  onPackage?: (name: string) => void;
+}
+
 export function snapshotVendoredPackages(
   config: DrsConfig,
-  consumerCwd: string
+  consumerCwd: string,
+  options: SnapshotVendoredOptions = {}
 ): VendorPackageSnapshot[] {
   const plan = getVendoringPlan(config, consumerCwd);
   const root = resolveRoot(config);
   const { consumerDir } = findConsumerByDir(config, consumerCwd);
   const exclude = resolveExcludeSet(config.vendoring?.exclude);
 
-  return plan.sourcePackages.map((sourcePackage) =>
-    snapshotVendoredPackage(config, root, consumerDir, sourcePackage, exclude)
-  );
+  return plan.sourcePackages.map((sourcePackage) => {
+    options.onPackage?.(sourcePackage.name);
+    return snapshotVendoredPackage(config, root, consumerDir, sourcePackage, exclude);
+  });
 }
 
 function snapshotVendoredPackage(
