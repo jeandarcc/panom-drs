@@ -5,6 +5,7 @@ import { resolveRoot } from '../config/load.js';
 import { findConsumerByDir } from './paths.js';
 import { getVendoringPlan, type VendoredSourcePackage } from './plan.js';
 import { hashDirectory, hasDistArtifacts, resolveExcludeSet } from './fingerprint.js';
+import { requiresDistArtifact } from './build-commands.js';
 
 export const VENDOR_STAMP_FILE = '.drs-vendor-stamp.json';
 
@@ -78,7 +79,7 @@ function snapshotVendoredPackage(
 ): VendorPackageSnapshot {
   const sourceDir = path.resolve(root, sourcePackage.sourcePath);
   const generatedDir = path.join(consumerDir, sourcePackage.generatedPath);
-  const distRequired = !sourcePackage.prebuilt && Boolean(sourcePackage.buildCommand);
+  const distRequired = requiresDistArtifact(sourcePackage.buildCommand);
 
   return {
     name: sourcePackage.name,

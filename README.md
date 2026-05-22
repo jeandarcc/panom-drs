@@ -43,7 +43,7 @@ Package entry fields:
 |-------|---------|
 | `to` | Consumer slugs that receive vendored/source copies; others get `registry.version` |
 | `only-source` | When a consumer is in `to`, never fall back to registry |
-| `prebuilt` | Sync + optional validate command; skip dist build (e.g. `@panomapp/arc`) |
+| `prebuilt` | Source is synced into `generated_modules/`; dist packages build at source and copy `dist/`; validation-only packages (`pack:check`) validate in the vendored copy |
 
 Configure vendoring directory/excludes:
 

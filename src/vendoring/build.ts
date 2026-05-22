@@ -6,6 +6,7 @@ import { resolveRoot } from '../config/load.js';
 import { findConsumerByDir } from './paths.js';
 import { getVendoringPlan } from './plan.js';
 import { resolveLog, type DrsProgressOptions } from '../log.js';
+import { isValidationOnlyBuild } from './build-commands.js';
 
 export interface VendoredBuildResult {
   built: string[];
@@ -27,7 +28,7 @@ export function buildSourcePackagesForVendoring(
   const log = resolveLog(options);
 
   for (const sourcePackage of plan.sourcePackages) {
-    if (sourcePackage.prebuilt || !sourcePackage.buildCommand) {
+    if (!sourcePackage.buildCommand || isValidationOnlyBuild(sourcePackage.buildCommand)) {
       skipped.push(sourcePackage.sourcePath);
       continue;
     }
@@ -102,7 +103,7 @@ export function buildVendoredModules(
       });
 
       if (sourcePackage.prebuilt) {
-        if (sourcePackage.buildCommand) {
+        if (sourcePackage.buildCommand && isValidationOnlyBuild(sourcePackage.buildCommand)) {
           log.progress(
             `  vendored validate ${sourcePackage.generatedPath}: ${sourcePackage.buildCommand}`
           );
