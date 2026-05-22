@@ -22,6 +22,15 @@ function readPackageJson(filePath: string): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<string, unknown>;
 }
 
+function createScaffoldPackageJson(consumerId: string): Record<string, unknown> {
+  return {
+    name: `@panom/drs-${consumerId}`,
+    private: true,
+    version: '0.0.0',
+    dependencies: {},
+  };
+}
+
 function groupByConsumer(entries: ResolvedEntry[]): Map<string, ResolvedEntry[]> {
   const map = new Map<string, ResolvedEntry[]>();
   for (const e of entries) {
@@ -43,11 +52,18 @@ export function applyPackageJson(
 
   for (const [consumerId, consumerEntries] of byConsumer) {
     const packageJsonPath = path.join(consumerEntries[0]!.consumerDir, 'package.json');
-    if (!fs.existsSync(packageJsonPath)) {
-      throw new Error(`Consumer "${consumerId}" package.json not found: ${packageJsonPath}`);
-    }
+    let pkg: Record<string, unknown>;
+    let scaffolded = false;
 
-    const pkg = readPackageJson(packageJsonPath);
+    if (!fs.existsSync(packageJsonPath)) {
+      pkg = createScaffoldPackageJson(consumerId);
+      scaffolded = true;
+      if (!dryRun) {
+        fs.mkdirSync(path.dirname(packageJsonPath), { recursive: true });
+      }
+    } else {
+      pkg = readPackageJson(packageJsonPath);
+    }
     const deps = (pkg.dependencies ?? {}) as Record<string, string>;
     let mutated = false;
 
@@ -72,7 +88,7 @@ export function applyPackageJson(
       }
     }
 
-    if (mutated && !dryRun) {
+    if ((mutated || scaffolded) && !dryRun) {
       pkg.dependencies = deps;
       fs.writeFileSync(packageJsonPath, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
       wroteFiles.push(packageJsonPath);

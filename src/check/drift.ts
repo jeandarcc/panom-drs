@@ -28,6 +28,17 @@ function checkPackageJsonDrift(config: DrsConfig, options: ResolveOptions = {}):
 
   for (const entry of plan.entries) {
     const packageJsonPath = path.join(entry.consumerDir, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) {
+      drift.push({
+        consumerId: entry.consumerId,
+        packageJsonPath,
+        name: entry.name,
+        expected: entry.specifier,
+        actual: undefined,
+      });
+      continue;
+    }
+
     const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
       dependencies?: Record<string, string>;
     };
