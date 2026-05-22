@@ -50,7 +50,7 @@ export {
   snapshotVendoredPackages,
   writeVendorStampForConsumer,
 } from './vendoring/stamp.js';
-export { hashDirectory, hasDistArtifacts } from './vendoring/fingerprint.js';
+export { hashDirectory, hashVendoredContent, hashPackageManifest, hasDistArtifacts } from './vendoring/fingerprint.js';
 
 import type { ResolutionPlan } from './resolve/plan.js';
 import type { DrsConfig } from './config/schema.js';

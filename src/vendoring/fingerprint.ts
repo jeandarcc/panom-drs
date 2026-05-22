@@ -12,6 +12,9 @@ const DEFAULT_EXCLUDES = new Set([
   '.drs-vendor-stamp.json',
 ]);
 
+/** Files that sync intentionally omits or rewrites — exclude from content drift fingerprints. */
+const VENDORED_CONTENT_EXCLUDES = new Set([...DEFAULT_EXCLUDES, 'package-lock.json', 'package.json']);
+
 export function hashDirectory(
   rootDir: string,
   exclude: ReadonlySet<string> = DEFAULT_EXCLUDES
@@ -35,6 +38,26 @@ export function hashDirectory(
   }
 
   return hash.digest('hex');
+}
+
+export function hashFile(filePath: string): string | null {
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+/** Hash of vendored payload — excludes rewritten package.json and lockfiles. */
+export function hashVendoredContent(
+  rootDir: string,
+  customExclude?: readonly string[]
+): string | null {
+  const exclude = new Set([...VENDORED_CONTENT_EXCLUDES, ...(customExclude ?? [])]);
+  return hashDirectory(rootDir, exclude);
+}
+
+export function hashPackageManifest(packageDir: string): string | null {
+  return hashFile(path.join(packageDir, 'package.json'));
 }
 
 function walkDirectory(

@@ -4,7 +4,7 @@ import type { DrsConfig } from '../config/schema.js';
 import { resolveRoot } from '../config/load.js';
 import { findConsumerByDir } from './paths.js';
 import { getVendoringPlan, type VendoredSourcePackage } from './plan.js';
-import { hashDirectory, hasDistArtifacts, resolveExcludeSet } from './fingerprint.js';
+import { hashVendoredContent, hashPackageManifest, hasDistArtifacts, resolveExcludeSet } from './fingerprint.js';
 import { requiresDistArtifact } from './build-commands.js';
 
 export const VENDOR_STAMP_FILE = '.drs-vendor-stamp.json';
@@ -12,8 +12,8 @@ export const VENDOR_STAMP_FILE = '.drs-vendor-stamp.json';
 export interface VendorStampEntry {
   sourcePath: string;
   generatedPath: string;
-  sourceHash: string;
-  generatedHash: string;
+  contentHash: string;
+  packageJsonHash: string;
   distRequired: boolean;
   distPresent: boolean;
 }
@@ -28,8 +28,9 @@ export interface VendorPackageSnapshot {
   name: string;
   sourcePath: string;
   generatedPath: string;
-  sourceHash: string | null;
-  generatedHash: string | null;
+  contentHash: string | null;
+  generatedContentHash: string | null;
+  packageJsonHash: string | null;
   distRequired: boolean;
   distPresent: boolean;
 }
@@ -85,8 +86,9 @@ function snapshotVendoredPackage(
     name: sourcePackage.name,
     sourcePath: sourcePackage.sourcePath,
     generatedPath: sourcePackage.generatedPath,
-    sourceHash: hashDirectory(sourceDir, exclude),
-    generatedHash: hashDirectory(generatedDir, exclude),
+    contentHash: hashVendoredContent(sourceDir, [...exclude]),
+    generatedContentHash: hashVendoredContent(generatedDir, [...exclude]),
+    packageJsonHash: hashPackageManifest(sourceDir),
     distRequired,
     distPresent: !distRequired || hasDistArtifacts(generatedDir),
   };
@@ -103,8 +105,8 @@ export function createVendorStamp(
     packages[snapshot.name] = {
       sourcePath: snapshot.sourcePath,
       generatedPath: snapshot.generatedPath,
-      sourceHash: snapshot.sourceHash ?? '',
-      generatedHash: snapshot.generatedHash ?? '',
+      contentHash: snapshot.contentHash ?? '',
+      packageJsonHash: snapshot.packageJsonHash ?? '',
       distRequired: snapshot.distRequired,
       distPresent: snapshot.distPresent,
     };

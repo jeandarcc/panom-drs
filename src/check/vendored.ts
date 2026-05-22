@@ -1,10 +1,11 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import type { DrsConfig } from '../config/schema.js';
 import { resolveRoot } from '../config/load.js';
 import { listVendoredConsumerDirs } from '../vendoring/run.js';
 import { resolve } from '../resolve/plan.js';
 import type { ResolveOptions } from '../resolve/plan.js';
-import { snapshotVendoredPackages } from '../vendoring/stamp.js';
+import { readVendorStamp, snapshotVendoredPackages } from '../vendoring/stamp.js';
 import { resolveLog, type DrsProgressOptions } from '../log.js';
 
 export type VendoredDriftReason =
@@ -18,6 +19,10 @@ export interface VendoredDriftItem {
   name: string;
   reason: VendoredDriftReason;
   detail: string;
+}
+
+function generatedDirExists(consumerDir: string, generatedPath: string): boolean {
+  return fs.existsSync(path.join(consumerDir, generatedPath));
 }
 
 export function checkVendoredDrift(
@@ -36,12 +41,13 @@ export function checkVendoredDrift(
       )?.[0] ?? path.relative(root, consumerDir);
 
     log.progress(`checking vendored modules for ${consumerId}…`);
+    const stamp = readVendorStamp(consumerDir);
     const snapshots = snapshotVendoredPackages(config, consumerDir, {
       onPackage: (name) => log.progress(`  fingerprint ${name}…`),
     });
 
     for (const snapshot of snapshots) {
-      if (!snapshot.sourceHash) {
+      if (!snapshot.contentHash) {
         drift.push({
           consumerId,
           name: snapshot.name,
@@ -51,7 +57,7 @@ export function checkVendoredDrift(
         continue;
       }
 
-      if (!snapshot.generatedHash) {
+      if (!generatedDirExists(consumerDir, snapshot.generatedPath) || !snapshot.generatedContentHash) {
         drift.push({
           consumerId,
           name: snapshot.name,
@@ -61,7 +67,38 @@ export function checkVendoredDrift(
         continue;
       }
 
-      if (snapshot.sourceHash !== snapshot.generatedHash) {
+      const stamped = stamp?.packages[snapshot.name];
+      if (stamped) {
+        if (snapshot.contentHash !== stamped.contentHash) {
+          drift.push({
+            consumerId,
+            name: snapshot.name,
+            reason: 'source-changed',
+            detail: snapshot.sourcePath,
+          });
+          continue;
+        }
+
+        if ((snapshot.packageJsonHash ?? '') !== stamped.packageJsonHash) {
+          drift.push({
+            consumerId,
+            name: snapshot.name,
+            reason: 'source-changed',
+            detail: `${snapshot.sourcePath}/package.json`,
+          });
+          continue;
+        }
+
+        if (snapshot.generatedContentHash !== stamped.contentHash) {
+          drift.push({
+            consumerId,
+            name: snapshot.name,
+            reason: 'generated-stale',
+            detail: snapshot.generatedPath,
+          });
+          continue;
+        }
+      } else if (snapshot.contentHash !== snapshot.generatedContentHash) {
         drift.push({
           consumerId,
           name: snapshot.name,

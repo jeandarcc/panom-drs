@@ -121,7 +121,7 @@ describe('vendored layout', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('passes check after sync and dist copy', () => {
+  it('passes vendored check after sync and dist copy despite rewritten package.json', () => {
     copyFixture();
     const config = loadConfig({
       configPath: path.join(sandboxRoot, 'drs.config.json'),
