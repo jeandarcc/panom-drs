@@ -57,7 +57,7 @@ function printHelp(): void {
   console.log(`@panomapp/drs — Dependency Resolver
 
 Usage:
-  drs build [--dry-run] [--skip-install] [--mode ...] [--config path] [--verbose]
+  drs build [--dry-run] [--skip-install] [--if-stale] [--mode ...] [--config path] [--verbose]
   drs resolve [--print human|json] [--mode local|registry|auto] [--config path]
   drs apply [--dry-run] [--build] [--install] [--mode ...] [--config path] [--verbose]
   drs check [--mode ...] [--config path]
@@ -71,6 +71,7 @@ Environment:
 
 Examples:
   drs build
+  drs build --if-stale
   drs build --dry-run
   drs check
 `);
@@ -91,6 +92,7 @@ async function main(): Promise<void> {
           mode,
           dryRun: flagBool(flags, 'dry-run'),
           skipInstall: flagBool(flags, 'skip-install'),
+          ifStale: flagBool(flags, 'if-stale'),
           verbose,
         });
         console.log(formatBuildSummary(result));

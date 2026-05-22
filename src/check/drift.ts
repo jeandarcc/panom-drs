@@ -4,6 +4,7 @@ import type { DrsConfig } from '../config/schema.js';
 import { resolve } from '../resolve/plan.js';
 import type { ResolveOptions } from '../resolve/plan.js';
 import { normalizeForCompare } from '../resolve/paths.js';
+import { checkVendoredDrift, type VendoredDriftItem } from './vendored.js';
 
 export interface DriftItem {
   consumerId: string;
@@ -16,10 +17,11 @@ export interface DriftItem {
 export interface CheckResult {
   ok: boolean;
   drift: DriftItem[];
+  vendoredDrift: VendoredDriftItem[];
   planMode: string;
 }
 
-export function check(config: DrsConfig, options: ResolveOptions = {}): CheckResult {
+function checkPackageJsonDrift(config: DrsConfig, options: ResolveOptions = {}): DriftItem[] {
   const plan = resolve(config, options);
   const drift: DriftItem[] = [];
 
@@ -43,9 +45,22 @@ export function check(config: DrsConfig, options: ResolveOptions = {}): CheckRes
     }
   }
 
+  return drift;
+}
+
+export function check(config: DrsConfig, options: ResolveOptions = {}): CheckResult {
+  const plan = resolve(config, options);
+  const drift = checkPackageJsonDrift(config, options);
+  const vendoredDrift = checkVendoredDrift(config, options);
+
   return {
-    ok: drift.length === 0,
+    ok: drift.length === 0 && vendoredDrift.length === 0,
     drift,
+    vendoredDrift,
     planMode: plan.mode,
   };
+}
+
+export function isStale(config: DrsConfig, options: ResolveOptions = {}): boolean {
+  return !check(config, options).ok;
 }

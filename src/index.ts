@@ -19,7 +19,9 @@ export type { BuildResult } from './apply/build.js';
 export { runLocalBuilds, runConsumerInstall } from './apply/build.js';
 
 export type { DriftItem, CheckResult } from './check/drift.js';
-export { check } from './check/drift.js';
+export { check, isStale } from './check/drift.js';
+export type { VendoredDriftItem, VendoredDriftReason } from './check/vendored.js';
+export { checkVendoredDrift } from './check/vendored.js';
 
 export { formatDockerHints, getDockerHints } from './docker/hints.js';
 export { formatPlan, formatCheckResult } from './format.js';
@@ -41,6 +43,14 @@ export {
   resolveVendoringDir,
   getPackageEntry,
 } from './vendoring/paths.js';
+export type { VendorStampFile, VendorPackageSnapshot } from './vendoring/stamp.js';
+export {
+  createVendorStamp,
+  readVendorStamp,
+  snapshotVendoredPackages,
+  writeVendorStampForConsumer,
+} from './vendoring/stamp.js';
+export { hashDirectory, hasDistArtifacts } from './vendoring/fingerprint.js';
 
 import type { ResolutionPlan } from './resolve/plan.js';
 import type { DrsConfig } from './config/schema.js';

@@ -25,15 +25,23 @@ export function formatPlan(plan: ResolutionPlan, format: 'human' | 'json' = 'hum
 
 export function formatCheckResult(result: CheckResult): string {
   if (result.ok) {
-    return `OK — all dependencies match plan (mode: ${result.planMode}).`;
+    return `OK — dependencies and vendored modules match plan (mode: ${result.planMode}).`;
   }
   const lines = [`DRIFT detected (mode: ${result.planMode}):`, ''];
+
   for (const d of result.drift) {
-    lines.push(`  [${d.consumerId}] ${d.name}`);
+    lines.push(`  [${d.consumerId}] ${d.name} (package.json)`);
     lines.push(`    expected: ${d.expected}`);
     lines.push(`    actual:   ${d.actual ?? '(missing)'}`);
     lines.push('');
   }
+
+  for (const d of result.vendoredDrift) {
+    lines.push(`  [${d.consumerId}] ${d.name} (${d.reason})`);
+    lines.push(`    ${d.detail}`);
+    lines.push('');
+  }
+
   lines.push('Run: drs build');
   return lines.join('\n');
 }

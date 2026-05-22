@@ -7,6 +7,7 @@ import {
   buildVendoredModules,
   copyVendoredDistArtifacts,
 } from '../vendoring/build.js';
+import { writeVendorStampForConsumer } from '../vendoring/stamp.js';
 
 export interface VendoringApplyResult {
   synced: string[];
@@ -66,6 +67,10 @@ export function runVendoring(
 
   if (errors.length > 0) {
     throw new Error(`DRS vendoring failed:\n${errors.join('\n')}`);
+  }
+
+  for (const consumerDir of listVendoredConsumerDirs(plan)) {
+    writeVendorStampForConsumer(config, consumerDir);
   }
 
   return { synced, built, skipped, errors };

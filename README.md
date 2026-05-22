@@ -67,6 +67,14 @@ syncVendoredModules(config, '/path/to/consumer');
 buildVendoredModules(config, '/path/to/consumer');
 ```
 
+Incremental dev sync:
+
+```bash
+drs build --if-stale
+```
+
+Compares source trees against `generated_modules/`, checks for missing `dist/`, and skips the full build when everything matches.
+
 ## Config
 
 ```json

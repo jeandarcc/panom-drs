@@ -9,6 +9,7 @@ import {
   getVendoringPlan,
   syncVendoredModules,
   copyVendoredDistArtifacts,
+  check,
 } from '../src/index.js';
 
 const fixtureRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures/vendored');
@@ -107,5 +108,30 @@ describe('vendored layout', () => {
     const plan = getVendoringPlan(config, path.join(sandboxRoot, 'apps/one'));
     expect(plan.sourcePackages.map((pkg) => pkg.name)).toEqual(['@panomapp/pkg-b', '@panomapp/pkg-a']);
     expect(plan.installCommand).toContain('file:./generated_modules/packages/pkg-a');
+  });
+
+  it('detects vendored drift when generated_modules is missing', () => {
+    copyFixture();
+    const config = loadConfig({
+      configPath: path.join(sandboxRoot, 'drs.config.json'),
+      cwd: sandboxRoot,
+    });
+    const result = check(config, { mode: 'auto' });
+    expect(result.vendoredDrift.length).toBeGreaterThan(0);
+    expect(result.ok).toBe(false);
+  });
+
+  it('passes check after sync and dist copy', () => {
+    copyFixture();
+    const config = loadConfig({
+      configPath: path.join(sandboxRoot, 'drs.config.json'),
+      cwd: sandboxRoot,
+    });
+    const consumerDir = path.join(sandboxRoot, 'apps/one');
+    syncVendoredModules(config, consumerDir);
+    copyVendoredDistArtifacts(config, consumerDir);
+    const result = check(config, { mode: 'auto' });
+    expect(result.vendoredDrift).toEqual([]);
+    expect(result.ok).toBe(false);
   });
 });
