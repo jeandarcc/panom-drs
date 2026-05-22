@@ -7,6 +7,11 @@ import { resolve } from '../resolve/plan.js';
 import type { ResolveOptions } from '../resolve/plan.js';
 import { readVendorStamp, snapshotVendoredPackages } from '../vendoring/stamp.js';
 import { resolveLog, type DrsProgressOptions } from '../log.js';
+import {
+  generatedPayloadMatchesSource,
+  manifestsEqual,
+  resolveSyncExcludeSet,
+} from '../vendoring/manifest.js';
 
 export type VendoredDriftReason =
   | 'missing-generated'
@@ -33,6 +38,7 @@ export function checkVendoredDrift(
   const drift: VendoredDriftItem[] = [];
   const root = resolveRoot(config);
   const log = resolveLog(options);
+  const exclude = resolveSyncExcludeSet(config.vendoring?.exclude);
 
   for (const consumerDir of listVendoredConsumerDirs(plan)) {
     const consumerId =
@@ -47,7 +53,7 @@ export function checkVendoredDrift(
     });
 
     for (const snapshot of snapshots) {
-      if (!snapshot.contentHash) {
+      if (!snapshot.sourceFiles) {
         drift.push({
           consumerId,
           name: snapshot.name,
@@ -57,7 +63,7 @@ export function checkVendoredDrift(
         continue;
       }
 
-      if (!generatedDirExists(consumerDir, snapshot.generatedPath) || !snapshot.generatedContentHash) {
+      if (!generatedDirExists(consumerDir, snapshot.generatedPath)) {
         drift.push({
           consumerId,
           name: snapshot.name,
@@ -68,7 +74,45 @@ export function checkVendoredDrift(
       }
 
       const stamped = stamp?.packages[snapshot.name];
-      if (stamped) {
+      const hasFileManifest = stamped && Object.keys(stamped.files).length > 0;
+
+      if (hasFileManifest) {
+        if (!manifestsEqual(snapshot.sourceFiles, stamped.files)) {
+          drift.push({
+            consumerId,
+            name: snapshot.name,
+            reason: 'source-changed',
+            detail: snapshot.sourcePath,
+          });
+          continue;
+        }
+
+        if ((snapshot.packageJsonHash ?? '') !== stamped.packageJsonHash) {
+          drift.push({
+            consumerId,
+            name: snapshot.name,
+            reason: 'source-changed',
+            detail: `${snapshot.sourcePath}/package.json`,
+          });
+          continue;
+        }
+
+        if (
+          !generatedPayloadMatchesSource(
+            path.join(consumerDir, snapshot.generatedPath),
+            snapshot.sourceFiles,
+            exclude
+          )
+        ) {
+          drift.push({
+            consumerId,
+            name: snapshot.name,
+            reason: 'generated-stale',
+            detail: snapshot.generatedPath,
+          });
+          continue;
+        }
+      } else if (stamped) {
         if (snapshot.contentHash !== stamped.contentHash) {
           drift.push({
             consumerId,
@@ -98,7 +142,13 @@ export function checkVendoredDrift(
           });
           continue;
         }
-      } else if (snapshot.contentHash !== snapshot.generatedContentHash) {
+      } else if (
+        !generatedPayloadMatchesSource(
+          path.join(consumerDir, snapshot.generatedPath),
+          snapshot.sourceFiles,
+          exclude
+        )
+      ) {
         drift.push({
           consumerId,
           name: snapshot.name,

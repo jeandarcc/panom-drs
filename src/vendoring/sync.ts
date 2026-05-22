@@ -4,31 +4,45 @@ import type { DrsConfig } from '../config/schema.js';
 import { resolveRoot } from '../config/load.js';
 import { findConsumerByDir, resolveVendoringDir } from './paths.js';
 import { getVendoringPlan, type VendoredSourcePackage } from './plan.js';
+import { readVendorStamp } from './stamp.js';
+import { resolveSyncExcludeSet, syncDirectoryIncremental, type IncrementalSyncResult } from './manifest.js';
 
-function shouldCopyEntry(source: string, exclude: ReadonlySet<string>): boolean {
-  const entryName = path.basename(source);
-  return !exclude.has(entryName) && !entryName.startsWith('._');
+export interface VendoredSyncResult {
+  packages: string[];
+  copied: string[];
+  removed: string[];
+  skipped: string[];
 }
 
-export function syncVendoredModules(config: DrsConfig, consumerCwd: string): void {
+export function syncVendoredModules(config: DrsConfig, consumerCwd: string): VendoredSyncResult {
   const plan = getVendoringPlan(config, consumerCwd);
   const root = resolveRoot(config);
   const { consumerDir } = findConsumerByDir(config, consumerCwd);
   const vendoringDir = resolveVendoringDir(config);
   const generatedRoot = path.join(consumerDir, vendoringDir);
-  const exclude = new Set(config.vendoring?.exclude ?? []);
+  const exclude = resolveSyncExcludeSet(config.vendoring?.exclude);
+  const stamp = readVendorStamp(consumerDir);
 
-  fs.rmSync(generatedRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   fs.mkdirSync(generatedRoot, { recursive: true });
+  removeUnplannedPackages(consumerDir, plan.sourcePackages, stamp);
+
+  const copied: string[] = [];
+  const removed: string[] = [];
+  const skipped: string[] = [];
+  const packages: string[] = [];
 
   for (const sourcePackage of plan.sourcePackages) {
     const absoluteSourcePath = path.resolve(root, sourcePackage.sourcePath);
     const absoluteGeneratedPath = path.join(consumerDir, sourcePackage.generatedPath);
     fs.mkdirSync(path.dirname(absoluteGeneratedPath), { recursive: true });
-    fs.cpSync(absoluteSourcePath, absoluteGeneratedPath, {
-      recursive: true,
-      filter: (source) => shouldCopyEntry(source, exclude),
-    });
+
+    const result = syncDirectoryIncremental(absoluteSourcePath, absoluteGeneratedPath, exclude);
+    seedGeneratedPackageJson(absoluteSourcePath, absoluteGeneratedPath);
+    packages.push(sourcePackage.name);
+    copied.push(...result.copied.map((file) => `${sourcePackage.name}:${file}`));
+    removed.push(...result.removed.map((file) => `${sourcePackage.name}:${file}`));
+    skipped.push(...result.skipped.map((file) => `${sourcePackage.name}:${file}`));
+
     pruneGeneratedNoise(absoluteGeneratedPath);
   }
 
@@ -39,6 +53,36 @@ export function syncVendoredModules(config: DrsConfig, consumerCwd: string): voi
       generatedPackages,
       vendoringDir
     );
+  }
+
+  return { packages, copied, removed, skipped };
+}
+
+function seedGeneratedPackageJson(sourceDir: string, generatedDir: string): void {
+  const sourcePackageJson = path.join(sourceDir, 'package.json');
+  const generatedPackageJson = path.join(generatedDir, 'package.json');
+  fs.mkdirSync(generatedDir, { recursive: true });
+  fs.copyFileSync(sourcePackageJson, generatedPackageJson);
+}
+
+function removeUnplannedPackages(
+  consumerDir: string,
+  plannedPackages: VendoredSourcePackage[],
+  stamp: ReturnType<typeof readVendorStamp>
+): void {
+  if (!stamp) {
+    return;
+  }
+
+  const plannedNames = new Set(plannedPackages.map((pkg) => pkg.name));
+  for (const [name, entry] of Object.entries(stamp.packages)) {
+    if (plannedNames.has(name)) {
+      continue;
+    }
+    const generatedDir = path.join(consumerDir, entry.generatedPath);
+    if (fs.existsSync(generatedDir)) {
+      fs.rmSync(generatedDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    }
   }
 }
 
@@ -101,3 +145,5 @@ function rewriteDependencyBlock(
     dependencies[dependencyName] = `file:${path.relative(generatedPackageDir, targetDir) || '.'}`;
   }
 }
+
+export type { IncrementalSyncResult };

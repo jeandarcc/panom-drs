@@ -7,6 +7,7 @@ import { findConsumerByDir } from './paths.js';
 import { getVendoringPlan } from './plan.js';
 import { resolveLog, type DrsProgressOptions } from '../log.js';
 import { isValidationOnlyBuild } from './build-commands.js';
+import { syncDirectoryIncremental } from './manifest.js';
 
 export interface VendoredBuildResult {
   built: string[];
@@ -70,9 +71,10 @@ export function copyVendoredDistArtifacts(config: DrsConfig, consumerCwd: string
     if (!fs.existsSync(sourceDist)) continue;
 
     const targetDist = path.join(consumerDir, sourcePackage.generatedPath, 'dist');
-    fs.rmSync(targetDist, { recursive: true, force: true });
-    fs.cpSync(sourceDist, targetDist, { recursive: true });
-    copied.push(sourcePackage.generatedPath);
+    const result = syncDirectoryIncremental(sourceDist, targetDist, new Set());
+    if (result.copied.length > 0 || result.removed.length > 0 || !fs.existsSync(targetDist)) {
+      copied.push(sourcePackage.generatedPath);
+    }
   }
 
   return copied;

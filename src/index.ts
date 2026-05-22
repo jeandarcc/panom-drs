@@ -43,14 +43,27 @@ export {
   resolveVendoringDir,
   getPackageEntry,
 } from './vendoring/paths.js';
-export type { VendorStampFile, VendorPackageSnapshot } from './vendoring/stamp.js';
+export type { VendorStampFile, VendorPackageSnapshot, VendorStampEntry } from './vendoring/stamp.js';
 export {
   createVendorStamp,
   readVendorStamp,
   snapshotVendoredPackages,
   writeVendorStampForConsumer,
 } from './vendoring/stamp.js';
-export { hashDirectory, hashVendoredContent, hashPackageManifest, hasDistArtifacts } from './vendoring/fingerprint.js';
+export {
+  hashDirectory,
+  hashVendoredContent,
+  hashPackageManifest,
+  hasDistArtifacts,
+} from './vendoring/fingerprint.js';
+export type { VendoredFileEntry, VendoredFileManifest, IncrementalSyncResult } from './vendoring/manifest.js';
+export type { VendoredSyncResult } from './vendoring/sync.js';
+export {
+  collectFileManifest,
+  syncDirectoryIncremental,
+  generatedPayloadMatchesSource,
+  manifestsEqual,
+} from './vendoring/manifest.js';
 
 import type { ResolutionPlan } from './resolve/plan.js';
 import type { DrsConfig } from './config/schema.js';
