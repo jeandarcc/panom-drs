@@ -17,6 +17,23 @@
           "type": "string",
           "enum": ["local", "registry", "auto"],
           "default": "auto"
+        },
+        "layout": {
+          "type": "string",
+          "enum": ["sibling", "vendored"],
+          "default": "sibling"
+        }
+      }
+    },
+    "vendoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dir": { "type": "string", "minLength": 1, "default": "generated_modules" },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "default": [".git", "node_modules", "dist", ".turbo", ".next", ".DS_Store"]
         }
       }
     },
@@ -78,6 +95,10 @@
       "additionalProperties": false,
       "properties": {
         "dir": { "type": "string", "minLength": 1 },
+        "layout": {
+          "type": "string",
+          "enum": ["sibling", "vendored"]
+        },
         "dependencies": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },

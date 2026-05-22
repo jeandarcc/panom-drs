@@ -1,0 +1,11 @@
+{
+  "name": "@panomapp/pkg-a",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "dependencies": {
+    "@panomapp/pkg-b": "file:../pkg-b"
+  },
+  "scripts": {
+    "build": "node ./build.cjs"
+  }
+}

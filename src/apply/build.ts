@@ -18,6 +18,9 @@ export function runLocalBuilds(plan: ResolutionPlan, options: { verbose?: boolea
     if (entry.source !== 'local' || !entry.buildCommand || !entry.localPath) {
       continue;
     }
+    if (entry.layout === 'vendored') {
+      continue;
+    }
     const key = `${entry.localPath}:${entry.buildCommand}`;
     if (seen.has(key)) continue;
     seen.add(key);

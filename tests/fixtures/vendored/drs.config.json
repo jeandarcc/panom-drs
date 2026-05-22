@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "root": ".",
+  "defaults": {
+    "mode": "auto",
+    "layout": "vendored"
+  },
+  "vendoring": {
+    "dir": "generated_modules"
+  },
+  "packages": {
+    "@panomapp/pkg-a": {
+      "to": ["apps/one"],
+      "only-source": true,
+      "local": { "path": "packages/pkg-a", "build": "node -e \"console.log('built')\"" },
+      "registry": { "version": "9.9.9" }
+    },
+    "@panomapp/pkg-b": {
+      "to": ["apps/one"],
+      "local": { "path": "packages/pkg-b", "build": "node -e \"console.log('built')\"" },
+      "registry": { "version": "8.8.8" }
+    }
+  },
+  "consumers": {
+    "app": {
+      "dir": "apps/one",
+      "dependencies": ["@panomapp/pkg-a", "@panomapp/pkg-b"]
+    },
+    "other-app": {
+      "dir": "apps/two",
+      "dependencies": ["@panomapp/pkg-a"]
+    }
+  }
+}

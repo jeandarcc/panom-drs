@@ -1,0 +1,6 @@
+{
+  "name": "app-two",
+  "dependencies": {
+    "@panomapp/pkg-a": "file:../../packages/pkg-a"
+  }
+}

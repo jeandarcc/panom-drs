@@ -1,8 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { DrsConfig, DrsMode, PackageEntry } from '../config/schema.js';
+import type { DrsConfig, DrsLayout, DrsMode, PackageEntry } from '../config/schema.js';
 import { resolveModeFromEnv, resolveRoot } from '../config/load.js';
 import { isCiEnvironment } from './env.js';
+import { packageUsesSourceForConsumer } from '../vendoring/plan.js';
+
+export interface ResolveSourceContext {
+  consumerSlug: string;
+  layout: DrsLayout;
+}
 
 export function effectiveMode(
   config: DrsConfig,
@@ -21,12 +27,18 @@ export function resolveSourceForPackage(
   config: DrsConfig,
   packageName: string,
   entry: PackageEntry,
-  mode: DrsMode
+  mode: DrsMode,
+  context: ResolveSourceContext
 ): 'local' | 'registry' {
   const root = resolveRoot(config);
   const localAbs = path.resolve(root, entry.local.path);
   const localExists = fs.existsSync(localAbs);
   const forceLocal = entry['only-source'] === true;
+  const sourceForConsumer = packageUsesSourceForConsumer(entry, context.consumerSlug);
+
+  if (!sourceForConsumer && mode !== 'local') {
+    return 'registry';
+  }
 
   if (forceLocal) {
     if (!localExists) {
@@ -49,6 +61,12 @@ export function resolveSourceForPackage(
     case 'registry':
       return 'registry';
     case 'auto':
+      if (context.layout === 'vendored') {
+        if (localExists) {
+          return 'local';
+        }
+        return 'registry';
+      }
       if (isCiEnvironment()) {
         return 'registry';
       }

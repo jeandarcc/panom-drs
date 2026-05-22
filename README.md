@@ -17,13 +17,55 @@ That is the only command you need for day-to-day work: updates consumer `package
 
 ## What `auto` does
 
-| Where | `auto` behavior |
-|-------|-----------------|
-| Your machine (paths exist) | `file:../local-package` + local `npm run build` |
-| CI (`CI=true` or `GITHUB_ACTIONS=true`) | `registry.version` from config (npm), even if folders exist in checkout |
-| Machine, path missing | registry |
+| Where | `auto` + `layout: sibling` | `auto` + `layout: vendored` |
+|-------|-----------------------------|-----------------------------|
+| Your machine (paths exist) | `file:../local-package` + build at source | `file:./generated_modules/...` + sync/build vendored copies |
+| CI (`CI=true`) | `registry.version` from config | vendored local paths (standalone repos) |
+| Machine, path missing | registry | registry |
 
-No need to set `DRS_MODE` for the usual local vs CI split.
+No need to set `DRS_MODE` for the usual local vs CI split when using the default sibling layout.
+
+## Vendored layout
+
+Set `"defaults": { "layout": "vendored" }` (or per-consumer `"layout": "vendored"`) to copy local packages into each consumer's `generated_modules/` directory, build them there, and rewrite `package.json` to `file:./generated_modules/...`.
+
+`drs build` with vendored layout:
+
+1. Builds source packages at the monorepo root (when needed)
+2. Syncs sources into `{consumer}/generated_modules/`
+3. Copies built `dist/` artifacts into vendored copies
+4. Runs validation/build steps inside vendored packages (`prebuilt`, missing `dist`, etc.)
+5. Updates consumer `package.json` files and runs `npm install`
+
+Package entry fields:
+
+| Field | Purpose |
+|-------|---------|
+| `to` | Consumer slugs that receive vendored/source copies; others get `registry.version` |
+| `only-source` | When a consumer is in `to`, never fall back to registry |
+| `prebuilt` | Sync + optional validate command; skip dist build (e.g. `@panomapp/arc`) |
+
+Configure vendoring directory/excludes:
+
+```json
+{
+  "vendoring": {
+    "dir": "generated_modules",
+    "exclude": [".git", "node_modules", "dist"]
+  }
+}
+```
+
+Programmatic vendoring API:
+
+```ts
+import { loadConfig, getVendoringPlan, syncVendoredModules, buildVendoredModules } from '@panomapp/drs';
+
+const config = loadConfig();
+const plan = getVendoringPlan(config, '/path/to/consumer');
+syncVendoredModules(config, '/path/to/consumer');
+buildVendoredModules(config, '/path/to/consumer');
+```
 
 ## Config
 
@@ -54,7 +96,7 @@ No need to set `DRS_MODE` for the usual local vs CI split.
 |------|----------|
 | `local` | Always `file:<path>` (fails if path missing) |
 | `registry` | Always `registry.version` |
-| `auto` | CI → registry; otherwise local if path exists, else registry |
+| `auto` | CI → registry with sibling layout; vendored layout stays local in CI |
 
 ## Environment (overrides)
 

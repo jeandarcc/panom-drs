@@ -4,15 +4,25 @@ import { resolveRoot } from '../config/load.js';
 import { effectiveMode, resolveSourceForPackage } from './modes.js';
 import { toFileSpecifier } from './paths.js';
 import { getDockerHints } from '../docker/hints.js';
+import {
+  resolveConsumerLayout,
+  resolveConsumerSlug,
+  resolveGeneratedModulePath,
+  resolveVendoringDir,
+} from '../vendoring/paths.js';
 
 export interface ResolvedEntry {
   name: string;
   consumerId: string;
   consumerDir: string;
+  consumerSlug: string;
+  layout: 'sibling' | 'vendored';
   source: 'local' | 'registry';
   specifier: string;
   localPath?: string;
+  vendoredPath?: string;
   buildCommand?: string;
+  prebuilt?: boolean;
 }
 
 export interface DockerHint {
@@ -43,9 +53,12 @@ export function resolve(config: DrsConfig, options: ResolveOptions = {}): Resolu
   const root = resolveRoot(config);
   const entries: ResolvedEntry[] = [];
   let planMode = options.mode ?? config.defaults.mode;
+  const vendoringDir = resolveVendoringDir(config);
 
   for (const [consumerId, consumer] of Object.entries(config.consumers)) {
     const consumerDir = path.resolve(root, consumer.dir);
+    const consumerSlug = resolveConsumerSlug(config, consumerDir);
+    const layout = resolveConsumerLayout(config, consumerId);
 
     for (const depName of consumer.dependencies) {
       const pkgEntry = config.packages[depName];
@@ -56,12 +69,23 @@ export function resolve(config: DrsConfig, options: ResolveOptions = {}): Resolu
       }
 
       const mode = effectiveMode(config, depName, options.mode);
-      const source = resolveSourceForPackage(config, depName, pkgEntry, mode);
+      const source = resolveSourceForPackage(config, depName, pkgEntry, mode, {
+        consumerSlug,
+        layout,
+      });
       const localAbs = path.resolve(root, pkgEntry.local.path);
 
       let specifier: string;
+      let vendoredPath: string | undefined;
+
       if (source === 'local') {
-        specifier = toFileSpecifier(consumerDir, localAbs);
+        if (layout === 'vendored') {
+          vendoredPath = resolveGeneratedModulePath(vendoringDir, pkgEntry.local.path);
+          const vendoredAbs = path.join(consumerDir, vendoredPath);
+          specifier = toFileSpecifier(consumerDir, vendoredAbs);
+        } else {
+          specifier = toFileSpecifier(consumerDir, localAbs);
+        }
       } else {
         specifier = pkgEntry.registry.version;
       }
@@ -70,10 +94,14 @@ export function resolve(config: DrsConfig, options: ResolveOptions = {}): Resolu
         name: depName,
         consumerId,
         consumerDir,
+        consumerSlug,
+        layout,
         source,
         specifier,
         localPath: source === 'local' ? pkgEntry.local.path : undefined,
+        vendoredPath: source === 'local' && layout === 'vendored' ? vendoredPath : undefined,
         buildCommand: source === 'local' ? pkgEntry.local.build : undefined,
+        prebuilt: source === 'local' ? pkgEntry.prebuilt === true : undefined,
       });
 
       if (!options.mode) {

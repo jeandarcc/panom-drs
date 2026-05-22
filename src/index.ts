@@ -1,4 +1,4 @@
-export type { DrsConfig, DrsMode, DrsSource, PackageEntry, ConsumerConfig } from './config/schema.js';
+export type { DrsConfig, DrsMode, DrsLayout, DrsSource, PackageEntry, ConsumerConfig, VendoringConfig } from './config/schema.js';
 export { drsConfigSchema, configSchema } from './config/schema.js';
 export { loadConfig, findConfigPath, resolveRoot, packageEnvKey, resolveModeFromEnv } from './config/load.js';
 export type { LoadConfigOptions } from './config/load.js';
@@ -26,6 +26,21 @@ export { formatPlan, formatCheckResult } from './format.js';
 
 export type { BuildOptions, BuildRunResult } from './build/run.js';
 export { build, formatBuildSummary } from './build/run.js';
+
+export type { VendoredSourcePackage, VendoringPlan } from './vendoring/plan.js';
+export { getVendoringPlan, formatNpmInstallCommand, packageUsesSourceForConsumer } from './vendoring/plan.js';
+export { syncVendoredModules } from './vendoring/sync.js';
+export { buildSourcePackagesForVendoring, buildVendoredModules, copyVendoredDistArtifacts } from './vendoring/build.js';
+export type { VendoringApplyResult } from './vendoring/run.js';
+export { runVendoring, listVendoredConsumerDirs } from './vendoring/run.js';
+export {
+  findConsumerByDir,
+  resolveConsumerLayout,
+  resolveConsumerSlug,
+  resolveGeneratedModulePath,
+  resolveVendoringDir,
+  getPackageEntry,
+} from './vendoring/paths.js';
 
 import type { ResolutionPlan } from './resolve/plan.js';
 import type { DrsConfig } from './config/schema.js';
@@ -71,7 +86,11 @@ export const INIT_CONFIG_TEMPLATE = {
   $schema: './node_modules/@panomapp/drs/schema/drs.config.schema.json',
   version: 1,
   root: '.',
-  defaults: { mode: 'auto' },
+  defaults: { mode: 'auto', layout: 'sibling' },
+  vendoring: {
+    dir: 'generated_modules',
+    exclude: ['.git', 'node_modules', 'dist', '.turbo', '.next', '.DS_Store'],
+  },
   packages: {
     '@panomapp/example': {
       local: { path: 'packages/example', build: 'npm run build' },
