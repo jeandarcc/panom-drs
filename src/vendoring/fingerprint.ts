@@ -60,6 +60,11 @@ export function hashPackageManifest(packageDir: string): string | null {
   return hashFile(path.join(packageDir, 'package.json'));
 }
 
+/** Source lockfile changes can affect build output but are excluded from tree manifests. */
+export function hashPackageLock(packageDir: string): string | null {
+  return hashFile(path.join(packageDir, 'package-lock.json'));
+}
+
 function walkDirectory(
   rootDir: string,
   currentDir: string,

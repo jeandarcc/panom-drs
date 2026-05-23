@@ -54,6 +54,7 @@ export {
   hashDirectory,
   hashVendoredContent,
   hashPackageManifest,
+  hashPackageLock,
   hasDistArtifacts,
 } from './vendoring/fingerprint.js';
 export type { VendoredFileEntry, VendoredFileManifest, IncrementalSyncResult } from './vendoring/manifest.js';

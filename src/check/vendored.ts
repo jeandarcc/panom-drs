@@ -39,12 +39,17 @@ export function checkVendoredDrift(
   const root = resolveRoot(config);
   const log = resolveLog(options);
   const exclude = resolveSyncExcludeSet(config.vendoring?.exclude);
+  const skipConsumers = new Set(options.skipConsumers ?? []);
 
   for (const consumerDir of listVendoredConsumerDirs(plan)) {
     const consumerId =
       Object.entries(config.consumers).find(
         ([, consumer]) => path.resolve(root, consumer.dir) === consumerDir
       )?.[0] ?? path.relative(root, consumerDir);
+
+    if (skipConsumers.has(consumerId)) {
+      continue;
+    }
 
     log.progress(`checking vendored modules for ${consumerId}…`);
     const stamp = readVendorStamp(consumerDir);

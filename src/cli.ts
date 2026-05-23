@@ -53,11 +53,21 @@ function flagBool(flags: Record<string, string | boolean>, name: string): boolea
   return flags[name] === true;
 }
 
+function flagStringList(flags: Record<string, string | boolean>, name: string): string[] {
+  const value = flags[name];
+  if (!value) return [];
+  if (typeof value === 'string') {
+    return value.split(',').map((part) => part.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function printHelp(): void {
   console.log(`@panomapp/drs — Dependency Resolver
 
 Usage:
-  drs build [--dry-run] [--skip-install] [--if-stale] [--mode ...] [--config path] [--verbose] [--quiet]
+  drs build [--dry-run] [--skip-install] [--if-stale] [--skip-consumer id[,id]] [--mode ...] [--config path] [--verbose] [--quiet]
+  drs check [--skip-consumer id[,id]] [--mode ...] [--config path] [--quiet]
   drs resolve [--print human|json] [--mode local|registry|auto] [--config path]
   drs apply [--dry-run] [--build] [--install] [--mode ...] [--config path] [--verbose] [--quiet]
   drs check [--mode ...] [--config path] [--quiet]
@@ -94,6 +104,7 @@ async function main(): Promise<void> {
           dryRun: flagBool(flags, 'dry-run'),
           skipInstall: flagBool(flags, 'skip-install'),
           ifStale: flagBool(flags, 'if-stale'),
+          skipConsumers: flagStringList(flags, 'skip-consumer'),
           verbose,
           quiet,
         });
@@ -144,7 +155,11 @@ async function main(): Promise<void> {
       }
       case 'check': {
         const config = loadConfig({ configPath, cwd });
-        const result = check(config, { mode, quiet });
+        const result = check(config, {
+          mode,
+          quiet,
+          skipConsumers: flagStringList(flags, 'skip-consumer'),
+        });
         console.log(formatCheckResult(result));
         if (!result.ok) {
           process.exitCode = 1;

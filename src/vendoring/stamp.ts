@@ -4,7 +4,7 @@ import type { DrsConfig } from '../config/schema.js';
 import { resolveRoot } from '../config/load.js';
 import { findConsumerByDir } from './paths.js';
 import { getVendoringPlan, type VendoredSourcePackage } from './plan.js';
-import { hashPackageManifest, hasDistArtifacts } from './fingerprint.js';
+import { hashPackageLock, hashPackageManifest, hasDistArtifacts } from './fingerprint.js';
 import { requiresDistArtifact } from './build-commands.js';
 import {
   aggregateManifestHash,
@@ -20,6 +20,7 @@ export interface VendorStampEntry {
   generatedPath: string;
   contentHash: string;
   packageJsonHash: string;
+  packageLockHash?: string;
   distRequired: boolean;
   distPresent: boolean;
   files: VendoredFileManifest;
@@ -38,6 +39,7 @@ export interface VendorPackageSnapshot {
   contentHash: string | null;
   generatedContentHash: string | null;
   packageJsonHash: string | null;
+  packageLockHash: string | null;
   sourceFiles: VendoredFileManifest | null;
   generatedFiles: VendoredFileManifest | null;
   distRequired: boolean;
@@ -136,6 +138,7 @@ function snapshotVendoredPackage(
     contentHash: sourceFiles ? aggregateManifestHash(sourceFiles) : null,
     generatedContentHash: generatedFiles ? aggregateManifestHash(generatedFiles) : null,
     packageJsonHash: hashPackageManifest(sourceDir),
+    packageLockHash: hashPackageLock(sourceDir),
     sourceFiles,
     generatedFiles,
     distRequired,
@@ -156,6 +159,7 @@ export function createVendorStamp(
       generatedPath: snapshot.generatedPath,
       contentHash: snapshot.contentHash ?? '',
       packageJsonHash: snapshot.packageJsonHash ?? '',
+      packageLockHash: snapshot.packageLockHash ?? '',
       distRequired: snapshot.distRequired,
       distPresent: snapshot.distPresent,
       files: snapshot.sourceFiles ?? {},

@@ -41,6 +41,8 @@ export interface ResolutionPlan {
 export interface ResolveOptions {
   mode?: DrsMode;
   env?: Record<string, string>;
+  /** Consumer ids from drs.config.json to omit from drift checks (e.g. mesh-runtime in daily dev). */
+  skipConsumers?: readonly string[];
 }
 
 export function resolve(config: DrsConfig, options: ResolveOptions = {}): ResolutionPlan {

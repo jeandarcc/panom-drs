@@ -25,10 +25,18 @@ export interface CheckResult {
 function checkPackageJsonDrift(config: DrsConfig, options: ResolveOptions = {}): DriftItem[] {
   const plan = resolve(config, options);
   const drift: DriftItem[] = [];
+  const skipConsumers = new Set(options.skipConsumers ?? []);
 
   for (const entry of plan.entries) {
+    if (skipConsumers.has(entry.consumerId)) {
+      continue;
+    }
+
     const packageJsonPath = path.join(entry.consumerDir, 'package.json');
     if (!fs.existsSync(packageJsonPath)) {
+      if (entry.layout === 'vendored') {
+        continue;
+      }
       drift.push({
         consumerId: entry.consumerId,
         packageJsonPath,
